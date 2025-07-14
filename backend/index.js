@@ -2,80 +2,109 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// 🔌 Connect MongoDB
-const connectDB = require('./db/connect');
-connectDB();
+// Middleware & Routes
+const auth = require('./middleware/auth');
+const authRoutes = require('./routes/authRoutes');
 
-// 🧠 Models
+// DB Connect
+const connectDB = require('./db/connect');
+
+// Models
 const Chat = require('./models/Chat');
 const User = require('./models/User');
 
-// 🚀 Initialize Express
+// Init Express App
 const app = express();
 app.use(cors());
-app.use(express.json()); // ✅ Required to access req.body
+app.use(express.json());
 
-// 💬 POST /api/chat - Chat with LLM
+// ------------------------
+// 🛡️ Auth Routes
+// ------------------------
+app.use('/api/auth', authRoutes);
+
+// ------------------------
+// 💬 POST /api/chat
+// ------------------------
+
 app.post('/api/chat', async (req, res) => {
-  const { message, email } = req.body;
+  const { message } = req.body;
 
-  if (!message || !email) {
-    return res.status(400).json({ error: "Message and email are required." });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "No token provided" });
+
+  const token = authHeader.split(" ")[1];
+  console.log('🔍 Token received:', token);
+  console.log('🔍 JWT_SECRET:', process.env.JWT_SECRET);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('🔍 Decoded token:', decoded);
+  } catch (err) {
+    console.log('🔍 Token verification error:', err.message);
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  const email = decoded.email;
+
+  if (!message) {
+    return res.status(400).json({ error: "Message is required." });
   }
 
   try {
-    // 🧾 Find or create user
+    // Find user
     let user = await User.findOne({ email });
     if (!user) {
-      user = await User.create({ email, name: email.split('@')[0] });
+      return res.status(401).json({ error: "User not found" });
     }
 
-    // 🔁 Send message to Mistral via Ollama
+    // Send to Ollama
     const response = await axios.post(
-      'http://localhost:11434/api/chat',
+      'http://localhost:11434/api/generate',
       {
         model: 'mistral',
-        messages: [
-          { role: 'system', content: 'You are a helpful assistant.' },
-          { role: 'user', content: message },
-        ]
-      },
-      { responseType: 'stream' }
+        prompt: message,
+        stream: false
+      }
     );
 
-    // 🧵 Handle streaming response
-    let reply = '';
-    response.data.on('data', async (chunk) => {
-      const lines = chunk.toString().split('\n').filter(Boolean);
-      for (const line of lines) {
-        const data = JSON.parse(line);
-        if (data.done) {
-          // 💾 Save chat to DB
-          await Chat.create({
-            user: user._id,
-            messages: [
-              { role: 'user', content: message },
-              { role: 'assistant', content: reply }
-            ]
-          });
+    const reply = response.data.response;
 
-          return res.json({ reply });
-        }
-        reply += data.message?.content || '';
-      }
+    // Save chat
+    await Chat.create({
+      user: user._id,
+      messages: [
+        { role: 'user', content: message },
+        { role: 'assistant', content: reply }
+      ]
     });
 
+    res.json({ reply });
   } catch (err) {
-    console.error('❌ Chat error:', err.message);
-    return res.status(500).json({ error: 'Failed to connect to Ollama or DB.' });
+    console.error("Chat error:", err.message);
+    res.status(500).json({ error: "Something went wrong" });
   }
 });
+// ------------------------
+// 📚 GET /api/history - Get chat history for authenticated user
+// ------------------------
+app.get('/api/history', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "No token provided" });
 
-// 📚 GET /api/history/:email - Get user's chat history
-app.get('/api/history/:email', async (req, res) => {
-  const { email } = req.params;
+  const token = authHeader.split(" ")[1];
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  const email = decoded.email;
 
   try {
     const user = await User.findOne({ email });
@@ -89,8 +118,17 @@ app.get('/api/history/:email', async (req, res) => {
   }
 });
 
-// 🟢 Start server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✅ API running at http://localhost:${PORT}`);
-});
+// ------------------------
+// 🟢 Start Server
+// ------------------------
+connectDB()
+  .then(() => {
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+      console.log(`✅ API running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection failed:", err.message);
+    process.exit(1); // 💥 Stop process if DB fails
+  });
