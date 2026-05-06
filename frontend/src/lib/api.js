@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create Axios instance with base URL
 const api = axios.create({
-  baseURL: "http://localhost:3001/api",
+  baseURL: "http://localhost:8080/api",
 });
 
 // Request interceptor to add token from localStorage

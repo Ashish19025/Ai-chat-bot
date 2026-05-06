@@ -17,7 +17,7 @@ export default function Signup() {
     setError("");
 
     try {
-      const res = await axios.post("http://localhost:3001/api/auth/signup", form);
+      const res = await axios.post("http://localhost:8080/api/auth/signup", form);
       localStorage.setItem("token", res.data.token);
       router.push("/chat"); // ✅ Navigate using Next.js
     } catch (err) {
@@ -26,7 +26,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-green-900">
       <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-lg">
         <h2 className="text-2xl font-bold mb-6 text-center">Create Account</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -38,7 +38,7 @@ export default function Signup() {
             type="email"
             placeholder="Email"
             onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg bg-amber-950"
+            className="w-full px-4 py-2 border rounded-lg bg-green-600 text-black font-extrabold "
             required
           />
           <input
@@ -46,12 +46,12 @@ export default function Signup() {
             type="password"
             placeholder="Password"
             onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-lg bg-amber-950"
+            className="w-full px-4 py-2 border rounded-lg bg-green-600 text-black font-extrabold"
             required
           />
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+            className="w-full bg-green-600 text-black py-2 rounded-lg hover:bg-green-800 font font-extrabold"
           >
             Sign Up
           </button>

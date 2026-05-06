@@ -19,7 +19,7 @@ export default function ChatPage() {
     }
 
     // Fetch chat history
-    fetch("http://localhost:3001/api/history", {
+    fetch("http://localhost:8080/api/history", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

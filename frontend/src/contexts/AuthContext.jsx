@@ -5,16 +5,22 @@ import {jwtDecode} from "jwt-decode";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
-  const [user, setUser] = useState(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-    try {
-      return jwtDecode(token);
-    } catch {
-      return null;
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+
+  // ✅ Run only in the browser
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+      try {
+        const decoded = jwtDecode(storedToken);
+        setUser({ email: decoded.email });
+      } catch (err) {
+        console.error("Invalid token");
+      }
     }
-  });
+  }, []);
 
   // ✅ Login function (used after signup or login)
   const login = (token) => {

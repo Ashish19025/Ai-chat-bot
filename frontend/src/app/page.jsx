@@ -1,9 +1,10 @@
-"use client";
+import HeroSection from "../components/HeroSection"
 
-export default function LoginPage() {
+export default function HomePage() {
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold">ulalala la oooo ulalala la muma loooooo</h1>
-    </div>
-  );
+    <>
+      <HeroSection />
+      {/* You can add <Products />, <Services />, <Members /> here later */}
+    </>
+  )
 }
