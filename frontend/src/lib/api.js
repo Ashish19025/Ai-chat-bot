@@ -1,16 +1,19 @@
 import axios from "axios";
 
-// Create Axios instance with base URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: API_URL,
 });
 
-// Request interceptor to add token from localStorage
+// Attach JWT token from localStorage on every request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },

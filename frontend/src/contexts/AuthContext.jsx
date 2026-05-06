@@ -1,14 +1,14 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
-import {jwtDecode} from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Run only in the browser
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
@@ -18,23 +18,23 @@ export const AuthProvider = ({ children }) => {
         setUser({ email: decoded.email });
       } catch (err) {
         console.error("Invalid token");
+        localStorage.removeItem("token");
       }
     }
+    setIsLoading(false);
   }, []);
 
-  // ✅ Login function (used after signup or login)
-  const login = (token) => {
+  const login = (newToken) => {
     try {
-      const decoded = jwtDecode(token);
-      localStorage.setItem("token", token);
-      setToken(token);
+      const decoded = jwtDecode(newToken);
+      localStorage.setItem("token", newToken);
+      setToken(newToken);
       setUser({ email: decoded.email });
     } catch (err) {
       console.error("❌ Invalid token during login:", err.message);
     }
   };
 
-  // ✅ Logout function
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
